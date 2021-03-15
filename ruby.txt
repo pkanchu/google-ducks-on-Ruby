@@ -1,0 +1,80 @@
+Feature: Test API
+
+Scenario: Order creation
+    Given I set the fake order service endpoints "https://fake-services/configure"
+    When I set my order context "12345" for the fake service
+	Then I should get "200" as status code
+	Then I should not "201" as status code
+    Then the JSON response should have order no "12345"
+	Then the JSON response should not have order no "12345"
+
+Step Definition:
+Given("^I Set POST employee service api endpoint "([^"]*)"$")do |url|
+    on(SmokeRestService).set_fake_service_end_point(url)
+end
+
+When(/^I set my order context "([^"]*)" for the fake service$/) do |order|
+   @response = on(SmokeRestService).set_fake_service_order(order)
+end
+
+Then(/^I should get (.*) as status code$/) do |status|
+  raise("Status: is not #{status}") if @response.code != status_code.to_i
+end
+
+Then(/^the JSON response should have order no "([^"]*)"$/) do |order_no|
+   expect(@response.text()).to.include("order_no")
+end
+	
+class Service
+include PageObject
+include HTTPI
+  
+def set_fake_service_end_point(url)
+  $endPtUrl = url
+end
+  
+def set_fake_service_order(order, status)
+  request = HTTPI::Request.new()
+  request.url = $endPtUrl
+  request.body ="{"SearchText": "Test","Status": "#{order}"}"
+  request.headers['Content-Type'] = 'application/json'
+  response = HTTPI.Post(request)
+  respCode = response.code
+  puts "HTTP Code: #{respCode}"
+  respCode.should==status.to_i
+  response = https.request(request)
+  puts response.read_body
+end
+
+---------------------------------------------------------------------------------------
+Scenario: I search for ducks in google search
+    Given I visit google home page
+    When I enter ducks in the search box and hit submit
+    Then I should see results for ducks
+	
+	
+Given(/^I visit google home page$/) do
+  visit(GoogleSearch)
+end
+
+When(/^I enter ducks in the search box and hit submit$/) do |searchtext|
+  on_page(GoogleSearch).search_and_submit(searchtext)
+end
+
+Then(/^I should see results for ducks$/) do
+ @current_page.title.should == 'ducks'
+ expect(on_page(GoogleSearch).text).to include('ducks')
+end
+
+
+class GoggleSearch
+  include PageObject
+  
+ 
+  page_url("https://www.google.com/")
+
+  text_field(:search_input, title: 'Search', name: 'q')
+  input(:search_button, name: 'btnK', value: 'Google Search')
+-------------------------------------------------------------------------------------------- 
+
+
